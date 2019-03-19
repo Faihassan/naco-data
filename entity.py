@@ -1,9 +1,11 @@
 import pandas as pd
 
 pd.set_option("display.max_columns", 500)
+
 # get data from the excel file
 cd = pd.read_excel("naco.xlsx", "Company_Details")
 gd = pd.read_excel("naco.xlsx", "Group_Details")
+
 # Rename the columns to match the Excel importer
 cd.rename(
     columns={
@@ -17,6 +19,7 @@ gd.rename(
     columns={"Group_Name": "Entity__OperatingName", "Group_URL": "Entity__Website"},
     inplace=True,
 )
+
 # Drop the columns not needed for the entity table
 cdc = cd.drop(
     [
@@ -41,42 +44,49 @@ gdc = gd.drop(
     ],
     axis=1,
 )
+
 # Merge the two sheets together to create one entity sheet
 frames = [cdc, gdc]
 entities = pd.concat(frames)
+
 # Fill the missing Legal name with Operating Name
 entities.Entity__LegalName = entities.Entity__LegalName.fillna(
     value=entities.Entity__OperatingName
 )
+
 # Add the Entities ID
 entities["test"] = entities.index
 entities["Entities__ID"] = "NEW_ENTITY" + entities["test"].astype(str)
 entities = entities.drop(["test"], axis=1)
-# Print the final Result
-# print(entities)
+
 # Import Status table
 cs = pd.read_excel("naco.xlsx", "Company_Status_2016")
+
 # Rename the Name
 cs.rename(columns={"Company_Name": "Entity__OperatingName"}, inplace=True)
+
 # Join the tables
-# cst = entities.set_index('Operating_Name').join(cs.set_index("Operating_Name"))
 cst = entities.join(cs.set_index("Entity__OperatingName"), on="Entity__OperatingName")
+
 # Drop the Age Column
 e_status = cst.drop(["Age"], axis=1)
+
 # Loading Group Characteristics
 group_ch = pd.read_excel("naco.xlsx", "Group_Characteristics")
+
 # Sort Values
 group_ch = group_ch.sort_values("Group_SubmissionYear")
+
 # Only Choose the data for 2018 submission to avoid multiple records
 group_ch = group_ch[group_ch.Group_SubmissionYear == 2018]
 group_ch.rename(columns={"Group_Name": "Entity__OperatingName"}, inplace=True)
+
+
 # Join group characteristics table with entities
 e_group = e_status.join(
     group_ch.set_index("Entity__OperatingName"), on=("Entity__OperatingName")
 )
-print(e_group.columns)
-# print(e_group)
-# export = e_group.to_csv("test.csv")
+
 entity_sheet = e_group[
     [
         "Entities__ID",
@@ -130,5 +140,6 @@ entity_sheet.rename(
     },
     inplace=True,
 )
+
 print(entity_sheet)
 export = entity_sheet.to_csv("entity.csv")
